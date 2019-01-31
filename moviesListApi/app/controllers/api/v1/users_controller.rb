@@ -5,8 +5,9 @@ module Api
 
       def create
         user = User.new(user_params)
-
-        if user.save
+        if params[:password] != params[:password_confirmation]
+          render json: { errors: ["Passwords don't match"]}, status: :bad_request
+        elsif user.save
           render json: {status: 'User created successfully'}, status: :created
         else
           render json: { errors: user.errors.full_messages }, status: :bad_request
@@ -19,7 +20,7 @@ module Api
 
       def login
         user = User.find_by(email: params[:email].to_s.downcase)
-        if user && sign_in(user, scope: :user)
+        if user && user.valid_password?(params[:password]) && sign_in(user, scope: :user)
             auth_token = JsonWebToken.encode({user_id: user.id})
             render json: {auth_token: auth_token}, status: :ok
         else
@@ -30,7 +31,7 @@ module Api
       private
 
       def user_params
-        params.permit(:email, :password, :password_confirmation, :phone)
+        params.permit(:email, :password, :password_confirmation, :phone, :role)
       end
     end
   end
